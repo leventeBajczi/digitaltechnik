@@ -1,0 +1,1 @@
+-intstyle "ise" -incremental -lib "unisims_ver" -lib "unimacro_ver" -lib "xilinxcorelib_ver" -lib "secureip" -o "C:/Users/bajcz/Documents/digithazi/hazi1/mantf_isim_beh.exe" -prj "C:/Users/bajcz/Documents/digithazi/hazi1/mantf_beh.prj" "work.mantf" "work.glbl" 
