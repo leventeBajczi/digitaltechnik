@@ -29,3 +29,4 @@ loop:
     JNZ loop
 endloop:
     MOV LD, r15         ;Ergebnis auf der LEDs darstellen
+    JMP endloop

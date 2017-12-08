@@ -1,0 +1,41 @@
+LOGSYS MiniRISC v2.0 assembler v1.0 list file
+Copyright (C) 2013 LOGSYS, Tamas Raikovich
+Source file: hf_1.s
+Created on : 26/11/2017 17:48:36
+
+S Addr  Instr   Source code
+------------------------------------------------------------------------------------------------
+                ; Meine Digit-Kode: 2 7 4 5 1 3 6 -> 29 7B 49 56 14 39 60
+
+                DEF LD     0x80                     ; LED adatregiszter          (írható/olvasható)
+                DEF ANZAHL 0x06                     ; Hilfe fuer die laenge des Zahlenvektors
+                DEF MASK   0x01
+
+                    DATA    
+
+D 00            DIGIT_CODE:
+D 00                DB      0x29, 0x7B, 0x49, 0x56, 0x14, 0x39, 0x60
+
+                    CODE    
+C 00            init:
+
+C 00    C000        mov     r0, #DIGIT_CODE[00]     ;die Anfangsadresse der Zahlenmuster in r0 speichern
+C 01    0006        add     r0, #ANZAHL[06]         ;Die letzte byte ist unser anfangswert
+C 02    FF6F        xor     r15, r15                ;Nullieren die r15 Register, darin zaehlen wir die eine
+C 03    9F80        mov     LD[80], r15
+C 04            loop:
+C 04    F1D0        mov     r1, (r0)                ;Einladung des Bytes
+C 05            inner_loop:
+C 05    F171        sr0     r1                      ;Rechst verschieben, Carry in Carry Flag speichern
+C 06    B109        jz      endinner[09]            ;Falls nur 0 Werte es gibt, sind wir mit diesem Byte fertig
+C 07    1F00        adc     r15, #0x00              ;Den carrywert zu r15 addieren
+C 08    B005        jmp     inner_loop[05]          ;Zurücktreten zu der Anfang dieser Schleife
+C 09            endinner:
+C 09    1F00        adc     r15, #0x00              ;Den carrywert zu r15 addieren
+C 0A    2001        sub     r0, #0x01               ;ein byte zurück
+C 0B    B604        jnn     loop[04]                ;Falls nicht, dann zurück zur außere Schleife
+C 0C    B00D        jmp     finished[0D]            ;Falls diese wert "negativ" ist, sind wir fertig
+
+C 0D            finished:
+C 0D    9F80        mov     LD[80], r15             ;Die Ergebnis auf dem LEDs darstellen
+C 0E    B00D        jmp     finished[0D]            ;die LEDS halten

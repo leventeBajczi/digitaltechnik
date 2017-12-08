@@ -39,3 +39,4 @@ loop:
     
 endloop:
     MOV LD, r15             ;Ergebnis auf die LEDs darstellen
+    JMP endloop

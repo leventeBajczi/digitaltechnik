@@ -1,0 +1,49 @@
+LOGSYS MiniRISC v2.0 assembler v1.0 list file
+Copyright (C) 2013 LOGSYS, Tamas Raikovich
+Source file: hf_3.s
+Created on : 26/11/2017 19:28:26
+
+S Addr  Instr   Source code
+------------------------------------------------------------------------------------------------
+                DEF LD         0x80                 ; LED adatregiszter (írható/olvasható)
+                DEF GERADE1    0x55                 ;MASKE
+                DEF GERADE2    0x33                 ;
+                DEF GERADE4    0x0F                 ;
+                DEF NACHLETZTE 0x08                 ;Erste adresse, die wir nicht benutzen
+
+                    DATA    
+D 00            DIGIT_CODE:
+D 00                DB      0x29, 0x7B, 0x49, 0x56, 0x14, 0x39, 0x60
+
+
+                    CODE    
+C 00            start:
+C 00    C000        mov     r0, #DIGIT_CODE[00]     ;Addresse einlesen
+C 01    FF6F        xor     r15, r15                ;Ergebnisregister ausnullen
+
+C 02            loop:
+C 02    F1D0        mov     r1, (r0)                ;Erste Byte einlesen
+C 03    F2C1        mov     r2, r1                  ;Kopieren
+C 04    4155        and     r1, #GERADE1[55]        ;Gerade Bits ausmasken (0-te, 2-te, 4-te, 6-te)
+C 05    F271        sr0     r2                      ;Rechts verschieben, um gleiche Maske benutzen zu koennen
+C 06    4255        and     r2, #GERADE1[55]        ;jetzt gerade Bits ausmasken (vorherig 1-te, 3-te, 5-te, 7-te)
+C 07    F102        add     r1, r2                  ;Zusammensummieren
+C 08    F2C1        mov     r2, r1                  ;Kopieren
+C 09    4133        and     r1, #GERADE2[33]        ;Gerade Zweibits ausmasken (0-1, 4-5)
+C 0A    F271        sr0     r2
+C 0B    F271        sr0     r2                      ;Zwei Stellen nach rechts verschieben
+C 0C    4233        and     r2, #GERADE2[33]        ;jetzt gerade Zweibits ausmasken (vorherig 2-3, 6-7)
+C 0D    F102        add     r1, r2                  ;Summieren
+C 0E    F2C1        mov     r2, r1                  ;Kopieren
+C 0F    410F        and     r1, #GERADE4[0F]        ;Untere 4 bits ausmasken
+C 10    7200        swp     r2                      ;Obene und untere Bits austauschen
+C 11    420F        and     r2, #GERADE4[0F]        ;jetzt untere 4 bits ausmasken (vorherig obene 4)
+C 12    F102        add     r1, r2                  ;Zusammensummieren
+C 13    FF01        add     r15, r1                 ;Ergebnis speichern
+C 14    0001        add     r0, #0x01               ;Addressenzeiger erhöhen
+C 15    A008        cmp     r0, #NACHLETZTE[08]     ;Falls wir fertig sind, sind sie gleich
+C 16    B202        jnz     loop[02]
+
+C 17            endloop:
+C 17    9F80        mov     LD[80], r15             ;Ergebnis auf die LEDs darstellen
+C 18    B017        jmp     endloop[17]

@@ -1,0 +1,39 @@
+LOGSYS MiniRISC v2.0 assembler v1.0 list file
+Copyright (C) 2013 LOGSYS, Tamas Raikovich
+Source file: hf_2.s
+Created on : 26/11/2017 17:51:06
+
+S Addr  Instr   Source code
+------------------------------------------------------------------------------------------------
+                DEF NACHLETZTE 0x28
+                DEF BYTEMASK   0x0F
+                DEF LD         0x80
+
+                    DATA    
+
+D 00            SUM_LUT:
+D 00                DB      0x00, 0x01, 0x01, 0x02, 0x01, 0x02, 0x02, 0x03, 0x01, 0x02, 0x02, 0x03, 0x02, 0x03, 0x03, 0x04
+                    ORG     0x20
+D 20            DIGIT_CODE:
+D 20                DB      0x29, 0x7B, 0x49, 0x56, 0x14, 0x39, 0x60
+
+                    CODE    
+C 00            start:
+C 00    C020        mov     r0, #DIGIT_CODE[20]     ;Einladung von der Anfangsadresse
+C 01    FF6F        xor     r15, r15                ;Den Register, den wir als Zaehler benutzen werden, ausnullen
+C 02            loop:
+C 02    F1D0        mov     r1, (r0)                ;Dateneinladung
+C 03    410F        and     r1, #BYTEMASK[0F]       ;untere 4 bits ausmasken
+C 04    FED1        mov     r14, (r1)               ;basisadresse ist 0, also die Offset allein koennte als Adresse benutzt werden
+C 05    FF0E        add     r15, r14
+C 06    F1D0        mov     r1, (r0)                ;Dateneinladung noch einmal
+C 07    7100        swp     r1                      ;Untere und obene Bits austauschen
+C 08    410F        and     r1, #BYTEMASK[0F]       ;untere 4 bits ausmasken
+C 09    FED1        mov     r14, (r1)               ;basisadresse ist 0, also die Offset allein koennte als Adresse benutzt werden
+C 0A    FF0E        add     r15, r14
+C 0B    0001        add     r0, #0x01               ;Adresse inkrementieren
+C 0C    A028        cmp     r0, #NACHLETZTE[28]     ;Falls sie die gleiche Wert betragen, sind wir fertig
+C 0D    B202        jnz     loop[02]
+C 0E            endloop:
+C 0E    9F80        mov     LD[80], r15             ;Ergebnis auf der LEDs darstellen
+C 0F    B00E        jmp     endloop[0E]

@@ -1,0 +1,162 @@
+LOGSYS MiniRISC v2.0 assembler v1.0 list file
+Copyright (C) 2013 LOGSYS, Tamas Raikovich
+Source file: fakultaet-1.s
+Created on : 08/12/2017 21:05:26
+
+S Addr  Instr   Source code
+------------------------------------------------------------------------------------------------
+                DEF SIZE 0x80
+                DEF HALF 0x40
+                DEF LD   0x80
+                DEF END  0x54
+                ;A feladatunk tulajdonkeppen egy 100-as szamrendszerben levo kaszkadositott osszeado realizalasa
+
+                    CODE    
+C 00    F060        xor     r0, r0                      ;lenullazzuk a szamlalot
+C 01    F161        xor     r1, r1                      ;lenullazzuk a segedregisztert
+C 02    C280        mov     r2, #SIZE[80]               ;betoltjuk r2-be a kinullazando terulet meretet
+C 03            null:                                   ;Memoriaterulet nullazasa, hogy ne legyen benne szemet
+C 03    F190        mov     (r0), r1                    ;az r0 altal jelzett helyre r1 erteket (0) kiirni
+C 04    0001        add     r0, #0x01                   ;a mutatot noveljuk
+C 05    F0A2        cmp     r0, r2                      ;teszteljuk, hogy elertuk-e a veget
+C 06    B203        jnz     null[03]                    ;ha nem, akkor visszamegyunk a loop elejere
+C 07            _start:                                 ;itt kezdodik a valos program
+C 07    C101        mov     r1, #0x01                   ;a segedregiszterbe 1-et toltunk, ami a kezdoertek
+C 08    C080        mov     r0, #SIZE[80]               ;
+C 09    2001        sub     r0, #0x01                   ;az utols byte-ra allitjuk a mutatot
+C 0A    F190        mov     (r0), r1                    ;Kezdoertek, 0! = 1 (definicio alapjan)
+
+C 0B    FD6D        xor     r13, r13                    ;lenullazzuk a carryt
+
+C 0C    F060        xor     r0, r0                      ;lenullazzuk a mutatot
+C 0D            loop:
+C 0D    B939        jsr     copy_second_half[39]        ;a memoria masodik felet lemasoljuk az elso felebe
+C 0E    F161        xor     r1, r1                      ;lenullazzuk a segedregisztert, ebben fogunk a szubrutinban szamolni felfele
+C 0F    F8C0        mov     r8, r0                      ;elmentjuk r0 ertelet
+C 10    0801        add     r8, #0x01                   ;noveljuk ezt az erteket (igy tudjuk hasznalni, ld. tizesek)
+C 11    B923        jsr     tizesek[23]                 ;a tizeseket eliminaljuk, hogy joval kevesebb szamitast kelljen veghezvinni
+C 12    B942        jsr     inner_loop[42]              ;a belso loop, ami arra van, hogy az osszeadasokat elvegezze
+C 13    0001        add     r0, #0x01                   ;noveljuk a szamlalo erteket
+C 14    B918        jsr     display_led[18]             ;kijelezzuk a LED-eken (BCD)
+C 15    A054        cmp     r0, #END[54]                ;ha elertuk a definialt vegerteket (END<=83)
+C 16    B20D        jnz     loop[0D]                    ;akkor mar nem terunk vissza a loop elejere, amugy igen
+C 17            end:
+C 17    B017        jmp     end[17]                     ;megtartjuk ezt az allapotot, elertuk a vegerteket
+
+
+C 18            display_led:
+C 18    F8C0        mov     r8, r0                      ;elmentjuk r0 erteket, hogy azt ne bantsuk
+C 19    F969        xor     r9, r9                      ;lenullazzuk a segedregisztert, amiben a BCD kod fog eloallni
+C 1A            display_loop:
+C 1A    A80A        cmp     r8, #0x0A                   ;ha mar az ertek kisebb, mint 10, akkor vegeztunk,
+C 1B    B51F        jn      display[1F]                 ;akkor mehetunk a display label-re
+C 1C    0901        add     r9, #0x01                   ;noveljuk a tizesek szamat (majd SWP-zzük)
+C 1D    280A        sub     r8, #0x0A                   ;levonunk tizet a szambol
+C 1E    B01A        jmp     display_loop[1A]            ;vissza a loop elejere
+C 1F            display:
+C 1F    7900        swp     r9                          ;felcsereljuk az also es a felso 4 bitet, ezzel egy helyiertekkel feljebb kerul az ertekes resz
+C 20    F859        or      r8, r9                      ;ossze VAGY-oljuk az also es a felso digitet
+C 21    9880        mov     LD[80], r8                  ;kiirjuk ezt a LED sorra
+C 22    BA00        rts     
+
+C 23            tizesek:
+C 23    A80A        cmp     r8, #0x0A                   ;ha hozzaadunk tizet, es ez az ertek nagyobb, mint r0, akkor visszaterunk, nem csinalunk mar semmit
+C 24    B529        jn      ret_tizesek[29]             ;
+C 25    B92A        jsr     shift_left[2A]              ;ha van benne egesz tizes, balra shifteljuk fel byte-tal
+C 26    280A        sub     r8, #0x0A                   ;levonunk tizet az ertekebol
+C 27    F1C0        mov     r1, r0                      ;betoltjuk r1-be r0 erteket,
+C 28    F128        sub     r1, r8                      ;makd kivonjuk belole a maradekot - ennyi osszeadast kell elvegezni a tizes szorzas utan
+C 29            ret_tizesek:
+C 29    BA00        rts                                 ;
+
+C 2A            shift_left:
+C 2A    FD6D        xor     r13, r13                    ;lenullazzuk a carry regisztert
+C 2B    C380        mov     r3, #SIZE[80]               ;betoltjuk az utolso byte cimet (+1)
+C 2C            shift_left_loop:
+C 2C    2301        sub     r3, #0x01                   ;a mutatot egyel visszaallitjuk
+C 2D    A340        cmp     r3, #HALF[40]               ;ha mar a felenel lejjebb tartunk, kilepunk a loopbol, vegeztunk
+C 2E    B538        jn      ret_shift_left[38]          ;ha elerjuk az also felet a memorianak, akkor abbahagyjuk
+C 2F    FCD3        mov     r12, (r3)                   ;betoltjuk az aktualis byte-ot
+C 30    7C00        swp     r12                         ;megcsereljuk az also es felso 4 bitet
+C 31    FECC        mov     r14, r12                    ;elmentjuk r14-ben ezt az erteket
+C 32    4CF0        and     r12, #0xF0                  ;also negy byte minket nem erdekel
+C 33    FC5D        or      r12, r13                    ;osszevagyoljuk a carryvel, amirol tudjuk, hogy negy bit van benne, raadasul alul
+C 34    FC93        mov     (r3), r12                   ;visszairjuk a memoriaba
+C 35    4E0F        and     r14, #0x0F                  ;az elmentett beolvasott felso 4 bitjet tartjuk meg (swp utan vagyunk)
+C 36    FDCE        mov     r13, r14                    ;es ezt beleirjuk a carrybe
+C 37    B02C        jmp     shift_left_loop[2C]
+
+C 38            ret_shift_left:
+C 38    BA00        rts     
+
+C 39            copy_second_half:
+C 39    F363        xor     r3, r3                      ;lenullazzuk a mutatot
+C 3A            copy:                                   ;Memoriaterulet lemasolasa
+C 3A    F4C3        mov     r4, r3                      ;lemasoljuk az eppen aktualis cimet
+C 3B    0440        add     r4, #HALF[40]               ;hozzaadjuk a forras cimehez a memoria felenek nagysagat
+C 3C    F1D4        mov     r1, (r4)                    ;betoltjuk a forras erteket
+C 3D    F193        mov     (r3), r1                    ;kiirjuk a celba
+C 3E    0301        add     r3, #0x01                   ;noveljuk a mutatot
+C 3F    A340        cmp     r3, #HALF[40]               ;ha a felenel tartanank, vegeztunk
+C 40    B23A        jnz     copy[3A]
+C 41    BA00        rts     
+
+C 42            inner_loop:                             ;tudjuk, hogy r0: vegertek, r1: szamoloregiszter
+C 42    F0A1        cmp     r0, r1                      ;amig nem lesz r0=r1, addig osszeadjuk az eredeti szamot (amit lemasoltunk) onmagahoz
+C 43    B148        jz      return[48]
+C 44    0101        add     r1, #0x01                   ;noveljuk a szamoloregisztert
+C 45    C701        mov     r7, #0x01                   ;ezt elmentjuk az r7-ben
+C 46    B949        jsr     inner_inner_loop[49]        ;a belso-belso fgv meghivasa
+C 47    B042        jmp     inner_loop[42]              ;elejerol ismet
+
+C 48            return:
+C 48    BA00        rts                                 ;visszaterunk a szubrutinbol
+
+C 49            inner_inner_loop:                       ;az osszeadas megvalositasa-a teljes felso felehez hozzaadjuk a teljes also felet-hasonlit a lemasolashoz
+C 49    C280        mov     r2, #SIZE[80]
+C 4A    F227        sub     r2, r7
+C 4B    FED2        mov     r14, (r2)
+C 4C    F5C2        mov     r5, r2
+C 4D    2540        sub     r5, #HALF[40]
+C 4E    FFD5        mov     r15, (r5)
+C 4F    B956        jsr     addbcd[56]                  ;segedfgv, ami r14-ben es r15-ban levo ertekeket az r13 segedregiszter segitsegevel osszeadja
+C 50    FE92        mov     (r2), r14
+C 51    A740        cmp     r7, #HALF[40]               ;ha a memoria felenel vagyunk, vegeztunk
+C 52    B655        jnn     inner_return[55]
+C 53    0701        add     r7, #0x01                   ;noveljuk a szamlalot
+C 54    B049        jmp     inner_inner_loop[49]
+C 55            inner_return:
+C 55    BA00        rts     
+
+C 56            addbcd:                                 ;Tudjuk, hogy r14: elso operandus, r15: masodik, r13: carry
+C 56    FACE        mov     r10, r14                    ;elmentjuk 1x
+C 57    FB6B        xor     r11, r11                    ;lenullazzuk a statuszregisztert
+C 58    F9CF        mov     r9, r15                     ;eltaroljuk r15 erteket
+C 59            second:
+C 59    4F0F        and     r15, #0x0F
+C 5A    4E0F        and     r14, #0x0F                  ;also negy bit
+C 5B    FE0D        add     r14, r13                    ;hozzaadjuk az elozo carryt az elso operandushoz
+C 5C    CD00        mov     r13, #0x00                  ;nem tudjuk xorolni, mert a carry flag jo, ha megmarad, de nullaznunk kell
+C 5D    1D00        adc     r13, #0x00                  ;az esetleges carryt megorizzuk
+C 5E    FE0F        add     r14, r15                    ;osszeadjuk a ket operandust
+C 5F    1D00        adc     r13, #0x00                  ;az esetleges carryt megorizzuk ismet
+C 60            too_big:
+C 60    AE0A        cmp     r14, #0x0A                  ;ennel nagyobbegyenlo szam nem lehet BCD
+C 61    B765        jv      skip[65]
+C 62    0D01        add     r13, #0x01                  ;egyet biztosan kell adni a carryhez
+C 63    2E0A        sub     r14, #0x0A                  ;levonunk belole tizet, hogy az egyeseket kapjuk
+C 64    B060        jmp     too_big[60]
+C 65            skip:                                   ;itt mar r14-ben biztosan egy valid, 10 alatti BCD szam van
+C 65    AB00        cmp     r11, #0x00                  ;ha mar egyszer lefutott, akkor vegeztunk, ha ez az elso, akkor megyunk tovabb
+C 66    B26E        jnz     ret[6E]                     ;
+C 67    0B01        add     r11, #0x01                  ;jelezzuk, hogy egyszer mar eljutottunk ide
+C 68    FCCE        mov     r12, r14                    ;az also negy bitet elmentjuk r12-ben, ez mar megvan
+C 69    7A00        swp     r10                         ;r10 bitjeit felcsereljuk
+C 6A    FECA        mov     r14, r10                    ;ezt beletoltjuk r14-be
+C 6B    FFC9        mov     r15, r9                     ;az elmentett r15-ot visszatoltjuk bele (r9-ben volt eddig)
+C 6C    7F00        swp     r15                         ;es ennek is megcsereljuk a bitjeit
+C 6D    B059        jmp     second[59]                  ;ujrakezdjuk
+C 6E            ret:
+C 6E    7E00        swp     r14                         ;felcsereljuk r14 bitjeit, ezzel egy helyiertekkel magasabbra kerul
+C 6F    FE5C        or      r14, r12                    ;osszeeselve az egyesekkel megkapjuk a szamot magat, ezt r14-ben fogjuk ujra hasznalni
+C 70    BA00        rts     
